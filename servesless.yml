@@ -1,0 +1,83 @@
+service: serverless
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:GetObject"
+        - "s3:PutObject"
+      Resource: "arn:aws:s3:::serverless-bucket/*"
+    - Effect: "Allow"
+      Action:
+        - "rds-db:connect"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "states:StartExecution"
+        - "states:DescribeExecution"
+        - "states:StopExecution"
+      Resource: "*"
+
+functions:
+  download_csv:
+    handler: handler.download_csv
+    events:
+      - http:
+          path: download-csv
+          method: post
+
+  process_csv:
+    handler: handler.process_csv
+    events:
+      - http:
+          path: process-csv
+          method: post
+
+stepFunctions:
+  stateMachines:
+    CsvProcessingStateMachine:
+      definition:
+        Comment: "A state machine to process CSV files"
+        StartAt: DownloadCSV
+        States:
+          DownloadCSV:
+            Type: Task
+            Resource: arn:aws:lambda:${self:provider.region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-download_csv
+            Next: ProcessCSV
+          ProcessCSV:
+            Type: Task
+            Resource: arn:aws:lambda:${self:provider.region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-process_csv
+            End: true
+      events:
+        - http:
+            path: start-csv-processing
+            method: post
+            cors: true
+
+plugins:
+  - serverless-step-functions
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+
+resources:
+  Resources:
+    RDS:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        DBInstanceIdentifier: relational-db
+        AllocatedStorage: 20
+        DBInstanceClass: db.t2.micro
+        Engine: mysql
+        MasterUsername: admin
+        MasterUserPassword: adminpassword
+        DBName: serverless
+  S3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: serverless-bucket

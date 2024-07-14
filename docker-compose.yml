@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  serverless:
+    image: serverless-app
+    build: .
+    volumes:
+      - ~/.aws:/root/.aws
+      - .:/app
+    command: deploy
