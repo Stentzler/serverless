@@ -1,0 +1,124 @@
+service: serverless
+
+provider:
+  name: aws
+  runtime: python3.10
+  region: ${env:REGION}
+  stage: ${env:STAGE}
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:GetObject"
+        - "s3:PutObject"
+      Resource: "arn:aws:s3:::${env:S3_BUCKET_NAME}/*"
+    - Effect: "Allow"
+      Action:
+        - "rds-db:connect"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "states:StartExecution"
+        - "states:DescribeExecution"
+        - "states:StopExecution"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "lambda:InvokeFunction"
+      Resource: "*"
+
+functions:
+  download_csv:
+    handler: handler.download_csv
+    events:
+      - http:
+          path: download-csv
+          method: post
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+    environment:
+      KEY_ID: ${env:KEY_ID}
+      KEY: ${env:KEY}
+      DB_URI: ${env:DB_URI}
+      DB_INSTANCE_IDENTIFIER: ${env:DB_INSTANCE_IDENTIFIER}
+      DB_ALLOCATED_STORAGE: ${env:DB_ALLOCATED_STORAGE}
+      DB_INSTANCE_CLASS: ${env:DB_INSTANCE_CLASS}
+      DB_ENGINE: ${env:DB_ENGINE}
+      DB_MASTER_USERNAME: ${env:DB_MASTER_USERNAME}
+      DB_MASTER_USER_PASSWORD: ${env:DB_MASTER_USER_PASSWORD}
+      DB_NAME: ${env:DB_NAME}
+      S3_BUCKET_NAME: ${env:S3_BUCKET_NAME}
+      PROCESS_CSV_LAMBDA_NAME: "${self:service}-${self:provider.stage}-process_csv"
+
+  process_csv:
+    handler: handler.process_csv
+    events:
+      - http:
+          path: process-csv
+          method: post
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+    environment:
+      KEY_ID: ${env:KEY_ID}
+      KEY: ${env:KEY}
+      DB_URI: ${env:DB_URI}
+      DB_INSTANCE_IDENTIFIER: ${env:DB_INSTANCE_IDENTIFIER}
+      DB_ALLOCATED_STORAGE: ${env:DB_ALLOCATED_STORAGE}
+      DB_INSTANCE_CLASS: ${env:DB_INSTANCE_CLASS}
+      DB_ENGINE: ${env:DB_ENGINE}
+      DB_MASTER_USERNAME: ${env:DB_MASTER_USERNAME}
+      DB_MASTER_USER_PASSWORD: ${env:DB_MASTER_USER_PASSWORD}
+      DB_NAME: ${env:DB_NAME}
+      S3_BUCKET_NAME: ${env:S3_BUCKET_NAME}
+
+stepFunctions:
+  stateMachines:
+    CsvProcessingStateMachine:
+      definition:
+        Comment: "A state machine to process CSV files"
+        StartAt: DownloadCSV
+        States:
+          DownloadCSV:
+            Type: Task
+            Resource: arn:aws:lambda:${env:REGION}:${aws:accountId}:function:${self:service}-${self:provider.stage}-download_csv
+            Next: ProcessCSV
+          ProcessCSV:
+            Type: Task
+            Resource: arn:aws:lambda:${env:REGION}:${aws:accountId}:function:${self:service}-${self:provider.stage}-process_csv
+            End: true
+      events:
+        - http:
+            path: start-csv-processing
+            method: post
+            cors: true
+
+plugins:
+  - serverless-step-functions
+  - serverless-python-requirements
+  - serverless-dotenv-plugin
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    layer: true
+    useDownloadCache: false
+    useStaticCache: false
+
+package:
+  individually: true
+  exclude:
+    - node_modules/**
+    - Dockerfile
+    - docker-compose.yml
+    - package.json
+    - venv/**
+    - tests/**
+    - .serverless/**
+    - .dockerignore
+    - .gitignore
+    - env_example
+    - package-lock.json
+    - README.md
+    - test_local.py
+    - .env
+    - .yml
+    - .git/**

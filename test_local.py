@@ -1,10 +1,9 @@
 import json
 
-import ipdb
 from dotenv import load_dotenv
 
-from download_csv.handler import download_csv
-from process_csv.handler import process_csv
+from handler import download_csv
+from handler import process_csv
 
 def test_download_lambda():
     # Mock
@@ -29,7 +28,11 @@ def test_process_file_lambda():
     response = process_csv(event, context)
     print(response)
 
+
 if __name__ == "__main__":
-    load_dotenv('./prod.env')
+    load_dotenv('./.env')
     # test_download_lambda()
     test_process_file_lambda()
+
+#   POST - https://d23y2qzyzj.execute-api.sa-east-1.amazonaws.com/prod/download-csv
+#   POST - https://d23y2qzyzj.execute-api.sa-east-1.amazonaws.com/prod/process-csv
