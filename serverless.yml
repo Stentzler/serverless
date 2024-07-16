@@ -47,7 +47,14 @@ functions:
       DB_MASTER_USER_PASSWORD: ${env:DB_MASTER_USER_PASSWORD}
       DB_NAME: ${env:DB_NAME}
       S3_BUCKET_NAME: ${env:S3_BUCKET_NAME}
-      PROCESS_CSV_LAMBDA_NAME: "${self:service}-${self:provider.stage}-process_csv"
+      PROCESS_CSV_LAMBDA_NAME: 
+        Fn::Join:
+          - ":"
+          - - arn:aws:lambda
+            - Ref: AWS::Region
+            - Ref: AWS::AccountId
+            - function
+            - "${self:service}-${self:provider.stage}-process_csv"
 
   process_csv:
     handler: handler.process_csv

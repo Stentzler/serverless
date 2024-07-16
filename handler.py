@@ -101,6 +101,8 @@ class FileProcessor:
     def _process_csv(self, file_path):
         """ Process CSV file data """
 
+        # NOTE O ideal aqui seria trabalhar com a lib csv, visto que a lib do pandas acaba
+        # sendo um pouco pesada para trabalhar com pandas
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         df = pd.read_csv(file_path, delimiter=';', encoding='latin1')
         results = []
@@ -260,6 +262,7 @@ class FileDownloader:
         """ Executes all the processes in this class """
 
         try:
+            # NOTE Lambda já possui a pasta tmp nativamente
             # if not os.path.exists(self._TMP_FILE_PATH):
             #     os.makedirs(self._TMP_FILE_PATH)
 
@@ -268,6 +271,9 @@ class FileDownloader:
                 logging.error(f'Arquivo {self._file_name} possui uma extensao invalida para este processo')
                 raise NotAllowedExtensionError(f'Arquivo {self._file_name} possui uma extensao invalida para este processo') 
             
+            # NOTE a trativa comentada abaixo foi a tratativa inicial que tentei implantar,
+            # Mas tratando-se de lambdas a melhor coisa a ser feita e bufferizar o arquivo e 
+            # fazer suas tratativas diretamente em memórial. 
             try:
                 # self._download_and_unzip_file()
                 self.upload_csv_to_s3()
@@ -300,6 +306,7 @@ class FileDownloader:
 
         finally:
             pass
+            # NOTE Isto resultara em um erro "/tmp/ is READ ONLY" 
             # shutil.rmtree(self._TMP_FILE_PATH)
             
     def upload_csv_to_s3(self):
