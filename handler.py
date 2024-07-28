@@ -408,18 +408,18 @@ def download_csv(event, context):
             "body": json.dumps({"error": str(e)})
         }
     
-    lambda_client = boto3.client('lambda')
-    response = lambda_client.invoke(
-        FunctionName=os.environ['PROCESS_CSV_LAMBDA_NAME'],
-        InvocationType='Event',
-        Payload=json.dumps({"s3_url": action.s3_url})
-    )
+    # lambda_client = boto3.client('lambda')
+    # response = lambda_client.invoke(
+    #     FunctionName=os.getenv('PROCESS_CSV_LAMBDA_NAME'),
+    #     InvocationType='Event',
+    #     Payload=json.dumps({"s3_url": action.s3_url})
+    # )
 
     return {
         "statusCode": 200,
         "body": json.dumps({
             "message": "CSV downloaded and process_csv function invoked.",
             "s3_url": action.s3_url,
-            "response": response
+            # "response": response
         })
     }
